@@ -3,6 +3,8 @@ env/
 venv/
 .venv
 .venv/
+.sent_emails
+.sent_emails/
 
 __pycache__/
 *.py[cod]
@@ -17,6 +19,41 @@ __pycache__/
 
 static/
 posts/static/
-media/
 
 db.sqlite3
+
+.vscode
+.vscode/
+vscode/
+
+.sent_emails
+.sent_emails/
+sent_emails/
+
+.posts/test_new.py
+posts/test_new.py
+
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+tmpqpgy6hw4/
+tmprnpcougf/
+tmpwzqqbku3/
+tmplpp8517h/
+tmp3kjmc0tm/
+.tmpqpgy6hw4
+.tmprnpcougf
+.tmpwzqqbku3
+.tmplpp8517h
+.tmp3kjmc0tm
+tmpqpgy6hw4
+tmprnpcougf
+tmpwzqqbku3
+tmplpp8517h
+tmp3kjmc0tm
+
+media/
+.media
