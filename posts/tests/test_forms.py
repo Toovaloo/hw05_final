@@ -1,20 +1,19 @@
 import shutil
 import tempfile
+
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
+
 from posts.forms import PostForm
 from posts.models import Group, Post, User
-from django.core.files.uploadedfile import SimpleUploadedFile
 
 
 class PostFormTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # Создаем временную папку для медиа-файлов;
-        # на момент теста медиа папка будет перопределена
-        settings.MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
         # Создаем запись в базе данных
         cls.author = User.objects.create(
             email='testemail@mail.ru',
@@ -35,12 +34,6 @@ class PostFormTests(TestCase):
         # Создаем форму, если нужна проверка атрибутов
         cls.form = PostForm()
 
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        # Рекурсивно удаляем временную после завершения тестов
-        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
-
     def setUp(self):
         # Создаём неавторизованный клиент
         self.guest_client = Client()
@@ -56,7 +49,7 @@ class PostFormTests(TestCase):
         # Подготавливаем данные для передачи в форму
         form_data = {
             'text': 'Тестовый текст 2',
-            'group': 1,
+            'group': PostFormTests.group.id
         }
         response = self.authorized_client.post(
             reverse('new_post'),
@@ -64,7 +57,7 @@ class PostFormTests(TestCase):
             follow=True
         )
         # Проверяем, сработал ли редирект
-        self.assertRedirects(response, '/')
+        self.assertRedirects(response, reverse('index'))
         # Проверяем, что создался пост
         self.assertTrue(Post.objects.filter(text='Тестовый текст 2').exists())
         # Проверяем, что количество постов увеличилось
@@ -75,7 +68,7 @@ class PostFormTests(TestCase):
         # Подготавливаю новые данные
         form_data_new = {
             'text': 'Новый текст поста',
-            'group': 1,
+            'group': PostFormTests.group.id
         }
         # Заполняю форму post_edit по адресу существующего поста новыми данными
         response = self.authorized_client.post(
@@ -152,7 +145,7 @@ class PostFormWithPicturesTests(TestCase):
         )
         form_data = {
             'text': 'Тестовый текст 2',
-            'group': 1,
+            'group': PostFormTests.group.id,
             'image': uploaded
         }
         response = self.authorized_client.post(
@@ -161,7 +154,7 @@ class PostFormWithPicturesTests(TestCase):
             follow=True
         )
         # Проверяем, сработал ли редирект
-        self.assertRedirects(response, '/')
+        self.assertRedirects(response, reverse('index'))
         # Проверяем, что создался пост
         self.assertTrue(Post.objects.filter(
             text='Тестовый текст поста с картинкой в группу').exists())

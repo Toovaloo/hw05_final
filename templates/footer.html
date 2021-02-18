@@ -2,5 +2,5 @@
     <p class="m-0 text-dark text-center ">
         <a href="{% url 'about:author' %}">Об авторе</a> • <a href="{% url 'about:tech' %}">О технологиях</a>
     </p>
-    <p class="m-0 text-dark text-center ">Лучшая социальная сеть <span style="color:red">Ya</span>tube © {{ year }}, все права защищены.</p>
+    <p class="m-0 text-dark text-center ">Сомнительная социальная сеть <span style="color:red">Ya</span>tube © {% now "F Y" %}, все права защищены.</p>
 </footer>

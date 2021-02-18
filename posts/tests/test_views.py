@@ -1,12 +1,14 @@
 import shutil
 import tempfile
+
 from django import forms
 from django.conf import settings
-from django.test import Client, TestCase
-from django.urls import reverse
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
-from posts.models import Group, Post, User, Follow
+from django.test import Client, TestCase
+from django.urls import reverse
+
+from posts.models import Follow, Group, Post, User
 
 
 class YatubePagesTests(TestCase):
@@ -83,7 +85,7 @@ class YatubePagesTests(TestCase):
     def test_post_edit_page_show_correct_context(self):
         """Шаблон edit сформирован с правильным контекстом"""
         response = self.authorized_client.get(reverse('post_edit', kwargs={
-            'username': 'AlexeyNavalny', 'post_id': '1'}))
+            'username': YatubePagesTests.author.username, 'post_id': '1'}))
         # Список ожидаемых типов полей формы:
         # указываем, объектами какого класса должны быть поля формы
         form_fields = {
@@ -106,19 +108,16 @@ class YatubePagesTests(TestCase):
     def test_post_page_show_correct_context(self):
         """Шаблон post_id сформирован с правильным контекстом"""
         response = self.authorized_client.get(reverse('post', kwargs={
-            'username': 'AlexeyNavalny', 'post_id': '1'}))
+            'username': YatubePagesTests.author.username, 'post_id': '1'}))
         # Взяли пост и проверили, что его содержание совпадает с ожидаемым
         post = response.context.get('post')
-        post_text = post.text
-        post_author = post.author
-        post_group = post.group
         profile_posts_count = response.context.get('posts_count')
         self.assertEqual(
-            post_text, 'Тестовый текст поста с группой')
+            post.text, 'Тестовый текст поста с группой')
         self.assertEqual(
-            post_author, User.objects.get(id=1))
+            post.author, YatubePagesTests.author)
         self.assertEqual(
-            post_group.title, Group.objects.get(id=1).title)
+            post.group.title, YatubePagesTests.group_to_be_with_posts.title)
         self.assertEqual(
             profile_posts_count, 1)
 
@@ -178,35 +177,30 @@ class YatubeManyPostsPagesTests(TestCase):
         # Взяли первый элемент из списка и проверили, что его содержание
         # совпадает с ожидаемым
         post = response.context.get('page')[0]
-        post_text_1 = post.text
-        post_author_1 = post.author
-        post_group_1 = post.group
         self.assertEqual(
-            post_text_1, 'Тестовый текст поста с группой')
+            post.text, 'Тестовый текст поста с группой')
         self.assertEqual(
-            post_author_1, User.objects.get(id=1))
+            post.author, YatubeManyPostsPagesTests.author)
         self.assertEqual(
-            post_group_1.title, 'Тестовая группа')
+            post.group.title, 'Тестовая группа')
 
     # Проверяем, что словарь context профайла пользователя
     # в первом элементе списка содержит ожидаемые значения
     def test_profile_page_show_correct_context(self):
         """Шаблон profile сформирован с правильным контекстом"""
         response = self.authorized_client.get(reverse('profile', kwargs={
-            'username': 'AlexeyNavalny'}))
+            'username': YatubeManyPostsPagesTests.author.username}))
         # Взяли первый элемент из списка и проверили, что его содержание
         # совпадает с ожидаемым
         post = response.context.get('page')[0]
-        post_text_0 = post.text
-        post_author_0 = post.author
-        post_group_0 = post.group
         profile_posts_count = response.context.get('posts').count()
         self.assertEqual(
-            post_text_0, 'Тестовый текст поста с группой')
+            post.text, 'Тестовый текст поста с группой')
         self.assertEqual(
-            post_author_0, User.objects.get(id=1))
+            post.author, YatubeManyPostsPagesTests.author)
         self.assertEqual(
-            post_group_0.title, Group.objects.get(id=1).title)
+            post.group.title,
+            YatubeManyPostsPagesTests.group_to_be_with_posts.title)
         self.assertEqual(
             profile_posts_count, 1)
 
@@ -217,9 +211,6 @@ class YatubeManyPostsPagesTests(TestCase):
         response = self.authorized_client.get(
             reverse('group', kwargs={'slug': 'test_slug'}))
         post = response.context.get('page')[0]
-        post_text_0 = post.text
-        post_author_0 = post.author
-        post_group_0 = post.group
         self.assertEqual(
             response.context.get('group').title, 'Тестовая группа')
         self.assertEqual(
@@ -227,11 +218,12 @@ class YatubeManyPostsPagesTests(TestCase):
         self.assertEqual(
             response.context.get('group').slug, 'test_slug')
         self.assertEqual(
-            post_text_0, 'Тестовый текст поста с группой')
+            post.text, 'Тестовый текст поста с группой')
         self.assertEqual(
-            post_author_0, User.objects.get(id=1))
+            post.author, YatubeManyPostsPagesTests.author)
         self.assertEqual(
-            post_group_0.title, Group.objects.get(id=1).title)
+            post.group.title,
+            YatubeManyPostsPagesTests.group_to_be_with_posts.title)
 
     # Проверяем, что новый пост добавляется в группу
     def test_new_group_post_in_group(self):
@@ -239,12 +231,14 @@ class YatubeManyPostsPagesTests(TestCase):
         response = self.authorized_client.get(reverse(
             'group', kwargs={'slug': 'test_slug'}))
         group_post = response.context.get('page')[0]
-        self.assertEqual(group_post, Post.objects.get(id=1))
+        self.assertEqual(group_post, YatubeManyPostsPagesTests.post)
 
     # Проверяем, что новый пост не добавляется в ненужную группу
     def test_new_group_post_not_in_group(self):
         """Новый групповой пост не появляется на странице ненужной группы."""
-        group_posts_count = Post.objects.filter(group='2').count()
+        group_posts_count = Post.objects.filter(
+            group=YatubeManyPostsPagesTests.group_to_be_empty
+        ).count()
         self.assertEqual(group_posts_count, 0)
 
 
@@ -333,19 +327,16 @@ class YatubePostsWithPicturesTests(TestCase):
         # Взяли первый элемент из списка и проверили, что его содержание
         # совпадает с ожидаемым
         post_with_pic = response.context.get('page')[0]
-        post_text_1 = post_with_pic.text
-        post_author_1 = post_with_pic.author
-        post_group_1 = post_with_pic.group
-        post_image_1 = post_with_pic.image
         index_posts_count = len(response.context.get('page').object_list)
         self.assertEqual(
-            post_text_1, 'Тестовый текст поста с картинкой в группу')
+            post_with_pic.text, 'Тестовый текст поста с картинкой в группу')
         self.assertEqual(
-            post_author_1, User.objects.get(id=1))
+            post_with_pic.author, YatubePostsWithPicturesTests.author)
         self.assertEqual(
-            post_group_1.title, 'Тестовая группа для картинок')
+            post_with_pic.group.title, 'Тестовая группа для картинок')
         self.assertEqual(
-            post_image_1, Post.objects.get(id=1).image)
+            post_with_pic.image,
+            YatubePostsWithPicturesTests.post_with_pic.image)
         self.assertEqual(
             index_posts_count, 1)
 
@@ -357,10 +348,6 @@ class YatubePostsWithPicturesTests(TestCase):
         response = self.authorized_client.get(
             reverse('group', kwargs={'slug': 'test_pic_slug'}))
         post_with_pic = response.context.get('page')[0]
-        post_text_1 = post_with_pic.text
-        post_author_1 = post_with_pic.author
-        post_group_1 = post_with_pic.group
-        post_image_1 = post_with_pic.image
         self.assertEqual(response.context.get('group').title,
                          'Тестовая группа для картинок'
                          )
@@ -370,13 +357,15 @@ class YatubePostsWithPicturesTests(TestCase):
         self.assertEqual(
             response.context.get('group').slug, 'test_pic_slug')
         self.assertEqual(
-            post_text_1, 'Тестовый текст поста с картинкой в группу')
+            post_with_pic.text, 'Тестовый текст поста с картинкой в группу')
         self.assertEqual(
-            post_author_1, User.objects.get(id=1))
+            post_with_pic.author, YatubePostsWithPicturesTests.author)
         self.assertEqual(
-            post_group_1.title, Group.objects.get(id=1).title)
+            post_with_pic.group.title,
+            YatubePostsWithPicturesTests.group_pic_posts.title)
         self.assertEqual(
-            post_image_1, Post.objects.get(id=1).image)
+            post_with_pic.image,
+            YatubePostsWithPicturesTests.post_with_pic.image)
 
     # Проверяем, что словарь context профайла пользователя
     # в первом элементе списка содержит ожидаемые значения
@@ -384,25 +373,23 @@ class YatubePostsWithPicturesTests(TestCase):
         """Шаблон profile с постом с картинкой сформирован
         с правильным контекстом"""
         response = self.authorized_client.get(reverse('profile', kwargs={
-            'username': 'piclover'}))
+            'username': YatubePostsWithPicturesTests.author.username}))
         # Взяли первый элемент из списка и проверили, что его содержание
         # совпадает с ожидаемым
         post_with_pic = response.context.get('page')[0]
-        post_text_1 = post_with_pic.text
-        post_author_1 = post_with_pic.author
-        post_group_1 = post_with_pic.group
-        post_image_1 = post_with_pic.image
         profile_posts_count = response.context.get('posts').count()
         self.assertEqual(
-            post_text_1, 'Тестовый текст поста с картинкой в группу')
+            post_with_pic.text, 'Тестовый текст поста с картинкой в группу')
         self.assertEqual(
-            post_author_1, User.objects.get(id=1))
+            post_with_pic.author, YatubePostsWithPicturesTests.author)
         self.assertEqual(
-            post_group_1.title, Group.objects.get(id=1).title)
+            post_with_pic.group.title,
+            YatubePostsWithPicturesTests.group_pic_posts.title)
         self.assertEqual(
             profile_posts_count, 1)
         self.assertEqual(
-            post_image_1, Post.objects.get(id=1).image)
+            post_with_pic.image,
+            YatubePostsWithPicturesTests.post_with_pic.image)
 
     # Проверяем, что словарь context отдельного поста
     # содержит ожидаемые значения
@@ -410,24 +397,23 @@ class YatubePostsWithPicturesTests(TestCase):
         """Шаблон post_id с постом с картинкой сформирован
         с правильным контекстом"""
         response = self.authorized_client.get(reverse('post', kwargs={
-            'username': 'piclover', 'post_id': '1'}))
+            'username': YatubePostsWithPicturesTests.author.username,
+            'post_id': '1'}))
         # Взяли пост и проверили, что его содержание совпадает с ожидаемым
         post_with_pic = response.context.get('post')
-        post_text = post_with_pic.text
-        post_author = post_with_pic.author
-        post_group = post_with_pic.group
-        post_image = post_with_pic.image
         profile_posts_count = response.context.get('posts_count')
         self.assertEqual(
-            post_text, 'Тестовый текст поста с картинкой в группу')
+            post_with_pic.text, 'Тестовый текст поста с картинкой в группу')
         self.assertEqual(
-            post_author, User.objects.get(id=1))
+            post_with_pic.author, YatubePostsWithPicturesTests.author)
         self.assertEqual(
-            post_group.title, Group.objects.get(id=1).title)
+            post_with_pic.group.title,
+            YatubePostsWithPicturesTests.group_pic_posts.title)
         self.assertEqual(
             profile_posts_count, 1)
         self.assertEqual(
-            post_image, Post.objects.get(id=1).image)
+            post_with_pic.image,
+            YatubePostsWithPicturesTests.post_with_pic.image)
 
 
 class YatubeCacheTests(TestCase):
@@ -495,7 +481,7 @@ class YatubeFollowingTests(TestCase):
             last_name='НеПодписывающийся',
             username='test_user_nonfollow'
         )
-        Post.objects.create(
+        cls.post = Post.objects.create(
             text='Тестовый текст поста 1',
             author=cls.author,
             group=None
@@ -556,7 +542,7 @@ class YatubeFollowingTests(TestCase):
         # Берем первый пост с ленты подписчика
         follow_post = response.context.get('page')[0]
         # Проверяем, что первый пост имеется в ленте
-        self.assertEqual(follow_post, Post.objects.get(id=1))
+        self.assertEqual(follow_post, YatubeFollowingTests.post)
 
     def test_nonfollowers_feed(self):
         """Пост не появляется в ленте у не-подписчика его автора."""

@@ -32,8 +32,8 @@
                                         {% endif %}
                                 {% endif %}
                                             <div class="h6 text-muted">
-                                            Подписчиков: {{ followers }} <br />
-                                            Подписок: {{ interests }}
+                                            Подписчиков: {{ author.following.count }} <br />
+                                            Подписок: {{ author.follower.count }}
                                             </div>
                                     </li>
                                     <li class="list-group-item">
