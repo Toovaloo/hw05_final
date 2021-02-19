@@ -111,15 +111,12 @@ class YatubePagesTests(TestCase):
             'username': YatubePagesTests.author.username, 'post_id': '1'}))
         # Взяли пост и проверили, что его содержание совпадает с ожидаемым
         post = response.context.get('post')
-        profile_posts_count = response.context.get('posts_count')
         self.assertEqual(
             post.text, 'Тестовый текст поста с группой')
         self.assertEqual(
             post.author, YatubePagesTests.author)
         self.assertEqual(
             post.group.title, YatubePagesTests.group_to_be_with_posts.title)
-        self.assertEqual(
-            profile_posts_count, 1)
 
     # Проверяем, что страница об авторе сайта вызывает нужный шаблон
     def test_about_author_page_uses_correct_template(self):
@@ -401,7 +398,6 @@ class YatubePostsWithPicturesTests(TestCase):
             'post_id': '1'}))
         # Взяли пост и проверили, что его содержание совпадает с ожидаемым
         post_with_pic = response.context.get('post')
-        profile_posts_count = response.context.get('posts_count')
         self.assertEqual(
             post_with_pic.text, 'Тестовый текст поста с картинкой в группу')
         self.assertEqual(
@@ -409,8 +405,6 @@ class YatubePostsWithPicturesTests(TestCase):
         self.assertEqual(
             post_with_pic.group.title,
             YatubePostsWithPicturesTests.group_pic_posts.title)
-        self.assertEqual(
-            profile_posts_count, 1)
         self.assertEqual(
             post_with_pic.image,
             YatubePostsWithPicturesTests.post_with_pic.image)
