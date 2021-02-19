@@ -62,11 +62,11 @@ def profile(request, username):
     if request.user.is_authenticated:
         following = Follow.objects.filter(user=request.user, author=author)
     return render(request, 'profile.html', {
-                      "paginator": paginator,
-                      'author': author,
-                      'posts': posts,
-                      'page': page,
-                      'following': following})
+                  "paginator": paginator,
+                  'author': author,
+                  'posts': posts,
+                  'page': page,
+                  'following': following})
 
 
 def post_view(request, username, post_id):
@@ -77,8 +77,7 @@ def post_view(request, username, post_id):
     following = False
     if request.user.is_authenticated:
         following = Follow.objects.filter(user=request.user, author=author)
-    return render(request,
-                  'post.html', {
+    return render(request, 'post.html', {
                   'author': author,
                   'post': post,
                   'comments': comments,
